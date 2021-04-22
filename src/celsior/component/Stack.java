@@ -1,4 +1,4 @@
-package celsior;
+package celsior.component;
 
 public class Stack implements Cloneable {
     byte[] stack;

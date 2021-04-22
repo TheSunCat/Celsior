@@ -1,5 +1,6 @@
 package celsior;
 
+import celsior.component.Stack;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 

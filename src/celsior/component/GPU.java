@@ -1,33 +1,28 @@
-package celsior;
+package celsior.component;
 
-import java.util.Random;
+import celsior.Celsior;
 
-public class GPU {
+public final class GPU {
     
     // False = display text, True = display pixels
     public boolean graphicsMode;
     public Memory m;
     
-    // used for debugging
-    private final Random rand = new Random();
-    
     public GPU() {
-        reset(true);
+        reset();
     }
     
-    public void reset(boolean clearMem) {
+    public void reset() {
         m = new Memory(9360); // 9kb graphics + 144b text
         
-        graphicsMode = false;
+        graphicsMode = false; // default to text mode
     }
     
     /**
      * Called every time the screen will be displayed.
      */
     public void clock() {
-//        for(int i = 0; i < m.size(); i++) {
-//            m.putByte(i, rand.nextInt(255));
-//        }
+        // no need to do anything
     }
     
     /**
@@ -49,22 +44,22 @@ public class GPU {
         if((x >= 0 && x <= 127) && (y >= 0 && y <= 71))
             m.putByte(Byte.toUnsignedInt(y) * 128 + Byte.toUnsignedInt(x), color);
         else
-            System.err.println("Error when pixeling: " + x + ", " + y);
+            Celsior.error("Pixel coordinates out of bounds: " + x + ", " + y);
     }
     
     /**
      * Draws a line in VRAM with specified color.
-     * @param rX the register containing the x position
-     * @param rY the register containing y position
+     * @param rX0 the register containing the x position
+     * @param rY0 the register containing y position
      * @param rX1 the register containing the second x position
      * @param rY1 the register containing the second y position
      * @param rColor the register containing the color of the line
      */
-    public void line(byte rX, byte rY, byte rX1, byte rY1, byte rColor) {
-        Celsior.cpu.callRe(rX);
+    public void line(byte rX0, byte rY0, byte rX1, byte rY1, byte rColor) {
+        Celsior.cpu.callRe(rX0);
         byte x = Celsior.cpu.dataBus;
         
-        Celsior.cpu.callRe(rY);
+        Celsior.cpu.callRe(rY0);
         byte y = Celsior.cpu.dataBus;
         
         Celsior.cpu.callRe(rX1);
@@ -150,7 +145,7 @@ public class GPU {
      * Toggle graphics mode from pixels to text or vice versa.
      */
     public void gmt() {
-        //graphicsMode = !graphicsMode;
+        graphicsMode = !graphicsMode;
     }
     
     public final int CHAR_START = 9216;

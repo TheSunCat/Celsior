@@ -1,4 +1,4 @@
-package celsior;
+package celsior.component;
 
 public class Register16 {
     public Register16(int _id) {

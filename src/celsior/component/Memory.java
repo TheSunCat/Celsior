@@ -1,4 +1,4 @@
-package celsior;
+package celsior.component;
 
 import java.util.Arrays;
 

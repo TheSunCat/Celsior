@@ -1,4 +1,4 @@
-package celsior.rendering;
+package celsior;
 
 import java.awt.event.KeyEvent;
 
@@ -32,7 +32,7 @@ public class Keyboard extends java.awt.event.KeyAdapter {
                 break;
         }
         
-        celsior.Celsior.cpu.pollInput(left, right, up, down, a, d, w, s);
+        Celsior.cpu.setInput(left, right, up, down, a, d, w, s);
     }
     
     @Override
@@ -64,7 +64,7 @@ public class Keyboard extends java.awt.event.KeyAdapter {
                 break;
         }
         
-        celsior.Celsior.cpu.pollInput(left, right, up, down, a, d, w, s);
+        Celsior.cpu.setInput(left, right, up, down, a, d, w, s);
     }
     
     boolean w, a, s, d, up, left, down, right;

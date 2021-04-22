@@ -1,7 +1,7 @@
 package celsior;
 
-import celsior.rendering.Keyboard;
-import celsior.rendering.Screen;
+import celsior.component.GPU;
+import celsior.component.CPU;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -31,6 +31,7 @@ public class Celsior {
     private static JMenuBar menuBar;
     private static JButton pauseButton;
     private static JButton stepButton;
+    private static JMenuItem debugModeMenuItem;
     
     private final Image icon;
     
@@ -40,16 +41,18 @@ public class Celsior {
     
     // not celsius
     public static void main(String[] args) throws IOException {
-        if(args.length == 0)
-            instance = new Celsior(1000);
-        else {
-            if(args[0].matches("-?\\d+(\\.\\d+)?")) // if arg is an int
-                instance = new Celsior(Integer.parseInt(args[0]));
-            else
-                return;
+        int frequency = 1000;
+
+        if(args.length > 0) {
+            try {
+                frequency = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                System.err.println("[ERROR] Failed to parse frequency \"" + args[0] + "\" as int! Proceeding with default 1000MHz...");
+            }
         }
-        
-        instance.startScreen();
+
+        instance = new Celsior(frequency);
+        instance.startScreenThread();
     }
     
     public Celsior(int freqHz) throws IOException {
@@ -105,6 +108,8 @@ public class Celsior {
     }
     
     private void setFreq(int freqHz) {
+        freqHz = Math.max(25, freqHz); // can't go under 25 due to cyclesPerRefresh
+        
         cpuFreqHz = freqHz;
         periodNanos = 1000000000 / freqHz;
         cyclesPerRefresh = freqHz / 25;
@@ -124,7 +129,7 @@ public class Celsior {
         debugFrame.setTitle(name + " - DEBUGGER");
     }
     
-    public void startScreen() {
+    public void startScreenThread() {
         java.util.Timer timer = new java.util.Timer();
         timer.scheduleAtFixedRate(new java.util.TimerTask() {
             @Override
@@ -236,12 +241,6 @@ public class Celsior {
         setName();
     }
     
-    public void error(String errorMessage) {
-        JOptionPane.showMessageDialog(container, errorMessage, NAME, JOptionPane.ERROR_MESSAGE);
-        
-        stopped = true;
-    }
-    
     public void stopEmulation() {
         if(paused)
             pauseButton.doClick();
@@ -251,8 +250,8 @@ public class Celsior {
         
         stopped = true;
         
-        cpu.reset(true);
-        gpu.reset(true);
+        cpu.reset();
+        gpu.reset();
         
         progName = "";
         
@@ -267,6 +266,8 @@ public class Celsior {
         
         stepButton.setVisible(debugging);
         debugFrame.setVisible(debugging);
+        
+        debugModeMenuItem.setText("Debug mode - " + ("" + debugging).toLowerCase());
     }
 
     /**
@@ -312,10 +313,10 @@ public class Celsior {
         JMenu cpuMenu = new JMenu("Options");
         fileMenu.setMnemonic(KeyEvent.VK_C);
 
-        JMenuItem clockSpeed = new JMenuItem("Overclocking...", KeyEvent.VK_S);
+        JMenuItem clockSpeed = new JMenuItem("Update CPU clock speed", KeyEvent.VK_S);
         clockSpeed.addActionListener((ActionEvent e) -> {
             Object userInput = JOptionPane.showInputDialog(container, "Enter new CPU frequency in Hz...",
-            NAME,
+            NAME + " | Overclocking",
             JOptionPane.INFORMATION_MESSAGE,
             new ImageIcon(),
             null,
@@ -330,15 +331,13 @@ public class Celsior {
             }
         });
         
-        JMenuItem debugMode = new JMenuItem("Debug mode - false", KeyEvent.VK_S);
-        debugMode.addActionListener((ActionEvent e) -> {
+        debugModeMenuItem = new JMenuItem("Debug mode - false", KeyEvent.VK_S);
+        debugModeMenuItem.addActionListener((ActionEvent e) -> {
             updateDebugMode(!debugging);
-            
-            debugMode.setText("Debug mode - " + ("" + debugging).toLowerCase());
         });
         
         cpuMenu.add(clockSpeed);
-        cpuMenu.add(debugMode);
+        cpuMenu.add(debugModeMenuItem);
         
         pauseButton = new JButton("Pause");
         pauseButton.addActionListener((ActionEvent e) -> {
@@ -396,7 +395,7 @@ public class Celsior {
         });
         
         
-        JMenuItem[] itmList = {openFile, clockSpeed, debugMode};
+        JMenuItem[] itmList = {openFile, clockSpeed, debugModeMenuItem};
         
         for(JMenuItem itm : itmList)
             setUI(itm);
@@ -440,7 +439,7 @@ public class Celsior {
                     
                     Color oldColor = g2d.getColor();
                     
-                    g2d.setColor(Color.black);
+                    g2d.setColor(Color.white);
                     
                     g2d.drawString(text, textRect.x, textRect.y + fm.getAscent());
                     
@@ -501,5 +500,16 @@ public class Celsior {
         canvas.requestFocus();
 
         canvas.addKeyListener(new Keyboard());
+    }
+    
+    public static void log(String message) {
+        System.out.println("[INFO] " + message);
+    }
+    
+    public static void error(String message) {
+        stopped = true;
+        System.err.println("[ERROR] " + message);
+        
+        JOptionPane.showMessageDialog(container, message, NAME, JOptionPane.ERROR_MESSAGE);
     }
 }

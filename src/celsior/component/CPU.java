@@ -1,8 +1,9 @@
-package celsior;
+package celsior.component;
 
+import celsior.Celsior;
 import static celsior.MathUtils.*;
 
-public class CPU {
+public final class CPU {
     public Memory m;
     public ALU alu;
     
@@ -26,10 +27,10 @@ public class CPU {
     private int addressBus = 0x00;
     
     public CPU() {
-        reset(true);
+        reset();
     }
     
-    public void reset(boolean clearMem) {
+    public void reset() {
         r0 = new Register(0);
         r1 = new Register(1);
         r2 = new Register(2);
@@ -49,130 +50,128 @@ public class CPU {
         secret0 = new Register(15);
         secret1 = new Register(16);
         
-        input = new Register(17); // INPUT
+        input = new Register(17);
         
         alu = new ALU();
         
         progCounter = 0x00;
         dataBus = 0x00;
         addressBus = 0x00;
+
+        m = new Memory(65536); // 64kb
+        h0 = new Memory(256);
+        h1 = new Memory(256);
+
+        stack = new Stack(8);
         
-        if(clearMem) {
-            m = new Memory(65536); // 64kb
-            h0 = new Memory(256);
-            h1 = new Memory(256);
-            
-            stack = new Stack(8);
-        }
-        
-        log("Reset CPU", false);
+        Celsior.log("Reset CPU");
     }
     
     public void clock() {
-        byte b = getByte();
+        byte b = readByte();
         switch(b) {
             case 0x00:
                 abort("Encountered NOP");
                 break;
             case 0x01:
                 instruction("ADD");
-                add(getByte(), getByte(), getByte());
+                add(readByte(), readByte(), readByte());
                 break;
             case 0x02:
                 instruction("SUB");
-                sub(getByte(), getByte(), getByte());
+                sub(readByte(), readByte(), readByte());
                 break;
             case 0x03:
                 instruction("MUL");
-                mul(getByte(), getByte(), getByte());
+                mul(readByte(), readByte(), readByte());
                 break;
             case 0x04:
                 instruction("RGT");
-                rgt(getByte(), getByte(), getByte());
+                rgt(readByte(), readByte(), readByte());
                 break;
             case 0x05:
                 instruction("LFT");
-                lft(getByte(), getByte(), getByte());
+                lft(readByte(), readByte(), readByte());
                 break;
             case 0x06:
                 instruction("LBL");
-                lbl(getByte(), getByte(), getByte());
+                lbl(readByte(), readByte(), readByte());
                 break;
             case 0x07:
                 instruction("JMP");
-                jmp(getByte());
+                jmp(readByte());
                 break;
             case 0x08:
                 instruction("JIF");
-                jif(getByte(), getByte());
+                jif(readByte(), readByte());
                 break;
             case 0x09:
                 instruction("MOV");
-                mov(getByte());
+                mov(readByte());
                 break;
             case 0xA:
-                instruction("PUSH");
-                push(getByte());
+                instruction("PSH");
+                push(readByte());
                 break;
             case 0x0B:
                 instruction("RTR");
-                rtr(getByte(), getByte());
+                rtr(readByte(), readByte());
                 break;
             case 0x0C:
                 instruction("MTR");
-                mtr(getByte(), getByte(), getByte());
+                mtr(readByte(), readByte(), readByte());
                 break;
             case 0x0D:
                 instruction("RTM");
-                rtm(getByte(), getByte(), getByte());
+                rtm(readByte(), readByte(), readByte());
                 break;
             case 0x0E:
                 instruction("MTM");
-                mtm(getByte(), getByte(), getByte(), getByte());
+                mtm(readByte(), readByte(), readByte(), readByte());
                 break;
             case 0x0F:
                 instruction("VTR");
-                vtr(getByte(), getByte());
+                vtr(readByte(), readByte());
                 break;
             case 0x10:
                 instruction("RTV");
-                rtv(getByte(), getByte());
+                rtv(readByte(), readByte());
                 break;
             case 0x11:
                 instruction("FTR");
-                ftr(getByte());
+                ftr(readByte());
                 break;
             case 0x12:
                 instruction("CMP");
-                cmp(getByte(), getByte());
+                cmp(readByte(), readByte());
                 break;
             case 0x13:
                 instruction("AND");
-                and(getByte(), getByte(), getByte());
+                and(readByte(), readByte(), readByte());
                 break;
             case 0x14:
                 instruction("NOT");
-                not(getByte(), getByte());
+                not(readByte(), readByte());
                 break;
             case 0x15:
                 instruction("OR");
-                or(getByte(), getByte(), getByte());
+                or(readByte(), readByte(), readByte());
                 break;
             case 0x16:
                 instruction("XOR");
-                xor(getByte(), getByte(), getByte());
+                xor(readByte(), readByte(), readByte());
                 break;
             case 0x50:
                 instruction("PXL");
-                Celsior.gpu.pxl(getByte(), getByte(), getByte());
+                Celsior.gpu.pxl(readByte(), readByte(), readByte());
                 break;
             case 0x51:
                 instruction("LINE");
-                Celsior.gpu.line(getByte(), getByte(), getByte(), getByte(), getByte());
+                Celsior.gpu.line(readByte(), readByte(), readByte(), readByte(), readByte());
                 break;
             case 0x52:
                 instruction("PRT");
-                Celsior.gpu.prt(getByte(), getByte(), getByte());
+                Celsior.gpu.prt(readByte(), readByte(), readByte());
                 break;
             case 0x53:
                 instruction("GMT");
@@ -188,36 +187,19 @@ public class CPU {
     }
     
     public void abort(String errorMessage) {
-        log(errorMessage + " at 0x" + Integer.toHexString(progCounter - 1).toUpperCase() + ".", true);
-        
-        Celsior.instance.pause();
+        Celsior.error(errorMessage + " at 0x" + Integer.toHexString(progCounter - 1).toUpperCase() + ".");
     }
     
     public void instruction(String instructionName) {
-        log("Executed " + instructionName + " at 0x" + Integer.toHexString(progCounter - 1).toUpperCase() + ".", false);
-    }
-    
-    public void log(String message, boolean error) {
-        String type;
-        
-        if(error)
-            type = "[ERROR] ";
-        else
-            type = "[DEBUG] ";
-        
-        System.out.println(type + message);
-        
-        if(error)
-            throw new IllegalArgumentException(type + message);
+        Celsior.log("Executed " + instructionName + " at 0x" + Integer.toHexString(progCounter - 1).toUpperCase() + ".");
     }
     
     /**
      * Gets the byte stored in memory at progCounter. Then, progCounter is incremented.
      * @return current byte in mem at progCounter + 1
      */
-    public byte getByte() {
+    public byte readByte() {
         byte ret = m.getByte(progCounter);
-        //System.out.println(Byte.toUnsignedInt(ret));
         pca();
         return ret;
     }
@@ -338,7 +320,7 @@ public class CPU {
         
         atp();
         
-        pca();
+        //pca(); I think this isn't needed, it was making all jumps overshoot.
     }
     
     /**
@@ -916,7 +898,7 @@ public class CPU {
         }
     }
     
-    public void pollInput(boolean left, boolean right, boolean up, boolean down,
+    public void setInput(boolean left, boolean right, boolean up, boolean down,
                             boolean a, boolean d, boolean w, boolean s) {
         
         byte inputVal = composeByte(left, right, up, down, a, d, w, s);

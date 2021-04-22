@@ -1,4 +1,4 @@
-package celsior;
+package celsior.component;
 
 import static celsior.MathUtils.composeByte;
 

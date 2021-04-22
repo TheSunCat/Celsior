@@ -1,10 +1,5 @@
-/*
- * Copyright (C) 2013-2018 Craig Thomas
- * This project uses an MIT style license - see LICENSE for details.
- */
-package celsior.rendering;
+package celsior;
 
-import celsior.Celsior;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -16,7 +11,7 @@ public class Screen {
     private int scale;
     private Font font;
 
-    /** Create a Screen object with a default scale of 8. */
+    /** Create a Screen object with a default scale of 10. */
     public Screen() {
         this(10);
     }
@@ -43,14 +38,12 @@ public class Screen {
             tempFont = new Font("Times", Font.PLAIN, 10 * scale);
         }
         
-        Rectangle2D stringBounds = g.getFontMetrics(tempFont).getStringBounds("eeeeeeeeeeeeeeee", g);
+        Rectangle2D stringBounds = g.getFontMetrics(tempFont).getStringBounds("eeeeeeeeeeeeeeee", g); // 16 chars per line
         
         float fontSize2d = (float) (tempFont.getSize2D());
         float stringWidth = (float) (stringBounds.getWidth());
         
-        tempFont = tempFont.deriveFont((float) ((fontSize2d * scale) * 128f / stringWidth));
-        
-        font = tempFont;
+        font = tempFont.deriveFont((float) ((fontSize2d * scale) * 128f / stringWidth)); // scale font to screen
         
         g.dispose();
     }
@@ -74,13 +67,9 @@ public class Screen {
         if(Celsior.gpu.graphicsMode) {
             for(int y = 0; y < 72; y++) {
                 for(int x = 0; x < 128; x++) {
-                    try {
-                        Color c = getColor(Celsior.gpu.m.getByte(y * 128 + x));
-                        g.setColor(c);
-                        g.fillRect(x * scale, y * scale, scale, scale);
-                    } catch(ArrayIndexOutOfBoundsException ex) {
-                        System.err.println("something [dab, but backwards (\"bad\")] happened while graphicing");
-                    }
+                    Color c = getColor(Celsior.gpu.m.getByte(y * 128 + x));
+                    g.setColor(c);
+                    g.fillRect(x * scale, y * scale, scale, scale);
                 }
             }
         } else {
@@ -93,19 +82,6 @@ public class Screen {
             row6 = toChar(Celsior.gpu.m.getBytes((char) (Celsior.gpu.CHAR_START + 96 ), (char) (Celsior.gpu.CHAR_START + 112)));
             row7 = toChar(Celsior.gpu.m.getBytes((char) (Celsior.gpu.CHAR_START + 112), (char) (Celsior.gpu.CHAR_START + 128)));
             row8 = toChar(Celsior.gpu.m.getBytes((char) (Celsior.gpu.CHAR_START + 128), (char) (Celsior.gpu.CHAR_START + 144)));
-
-//            row0 = "eeeeeeeeeeeeeeee".toCharArray();
-//            row1 = row0;
-//            row2 = row0;
-//            row3 = row0;
-//            row4 = row0;
-//            row5 = row0;
-//            row6 = row0;
-//            row7 = row0;
-//            row8 = row0;
-//            
-//            FontMetrics fm = g.getFontMetrics(font);
-//            System.out.println("Width: " + fm.stringWidth(new String(row0)) + ", Height: " + fm.getHeight());
             
             g.setFont(font);
             g.setColor(Color.white);
@@ -134,7 +110,7 @@ public class Screen {
     }
     
     private final char[] charMap = {
-        ' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+        ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
         'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -152,26 +128,25 @@ public class Screen {
                    row7 = new char[16],
                    row8 = new char[16];
     
-    public Color getColor(byte b) {
+    public Color getColor(byte input) {
         int[] redBits = new int[3];
         for(int x = 0; x < 3; x++)
-            redBits[x] = (b >>> x + 5) & 1;
+            redBits[x] = (input >>> x + 5) & 1;
         
         int[] greenBits = new int[3];
         for(int x = 0; x < 3; x++)
-            greenBits[x] = (b >>> x + 2) & 1;
+            greenBits[x] = (input >>> x + 2) & 1;
         
         int red = redBits[0] + redBits[1] * 2 + redBits[2] * 4;
         int green = greenBits[0] + greenBits[1] * 2 + greenBits[2] * 4;
-        int blue = b & 3;
+        int blue = input & 3;
         
         
         float r = (red / 7f) * 255;
         float g = (green / 7f) * 255;
-        float bl = (blue / 3f) * 255;
+        float b = (blue / 3f) * 255;
         
-        Color c = new Color((int) r, (int) g, (int) bl);
-        return c;
+        return new Color((int) r, (int) g, (int) b);
     }
 
     /**
